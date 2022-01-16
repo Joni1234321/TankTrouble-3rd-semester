@@ -17,5 +17,5 @@ What we chose
 - A replica of the online multiplayer game TankTrouble
 
 
-How to run? 
+How to run?  
 Run the Main.java in the package dk.dtu.tanktrouble.app package
