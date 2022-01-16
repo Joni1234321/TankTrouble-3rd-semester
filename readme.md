@@ -1,4 +1,4 @@
-Project made for course 02148 Introduction to Coordination in Distributed Applications https://kurser.dtu.dk/course/02148    
+Project made for course 02148 - Introduction to Coordination in Distributed Applications https://kurser.dtu.dk/course/02148    
 Made in a group of 4 during the 3 week period of January 2021
 
 Where are the files?  
