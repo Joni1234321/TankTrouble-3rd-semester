@@ -1,0 +1,10 @@
+Shotgun
+Laser guided laser
+Homing missile
+Mines
+Double shots
+Minigun
+Move faster
+Bomb (explodes into fragments after being shot)
+Laser throught walls
+Shield
