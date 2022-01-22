@@ -18,4 +18,4 @@ The project is made with JavaFX, so you need that to play the game!
 - A replica of the online multiplayer game TankTrouble
 
 # How to run?  
-Run the Main.java in the package dk.dtu.tanktrouble.app package
+Run the Main.java in the package dk.dtu.tanktrouble.app
