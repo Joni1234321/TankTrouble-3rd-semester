@@ -2,7 +2,7 @@
 Project made for course 02148 - Introduction to Coordination in Distributed Applications https://kurser.dtu.dk/course/02148    
 Made in a group of 4 during the 3 week period of January 2022
 
-This is a working version, but the game is still under development
+Demo: https://www.youtube.com/watch?v=ZwIch97Oa1U
 
 # Where are the files?  
 - All the files under the package dk.dtu.tanktrouble are made by us!
