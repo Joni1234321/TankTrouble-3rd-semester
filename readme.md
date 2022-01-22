@@ -9,7 +9,7 @@ https://www.youtube.com/watch?v=ZwIch97Oa1U
 - All the files under the package dk.dtu.tanktrouble are made by us!
 - The other files are required for jspace to work
 
-The project is made with JavaFX, so you need that to play the game! 
+The project is made with JavaFX 17.0.1, so you need that to play the game! 
 
 ## Project requirement made by the course: 
 - Create programs that could work together
