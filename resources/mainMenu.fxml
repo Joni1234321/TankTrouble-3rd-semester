@@ -32,45 +32,66 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.MenuButton?>
-<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
-<?import javafx.scene.text.Text?>
 
-<VBox prefHeight="620.0" prefWidth="820.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="dk.dtu.tanktrouble.app.controller.MainMenuController">
+<VBox alignment="CENTER" prefHeight="620.0" prefWidth="820.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="dk.dtu.tanktrouble.app.controller.MainMenuController">
   <children>
-    <AnchorPane maxHeight="-1.0" maxWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="-fx-background-color: #ffffff;" VBox.vgrow="ALWAYS">
-      <children>
-            <Text layoutX="190.0" layoutY="159.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Welcome to TankTrouble!" wrappingWidth="439.9140625">
-               <font>
-                  <Font name="System Bold" size="36.0" />
-               </font>
-            </Text>
-            <ImageView fx:id="imageView" fitHeight="233.0" fitWidth="223.0" layoutX="299.0" layoutY="199.0" pickOnBounds="true" preserveRatio="true">
-               <image>
-                  <Image url="@tank.png" />
-               </image>
-            </ImageView>
-            <Button layoutX="454.0" layoutY="465.0" mnemonicParsing="false" onAction="#onExitClick" prefHeight="39.0" prefWidth="136.0" style="-fx-background-color: #9e6dd6;" text="Exit" textFill="WHITE">
-               <font>
-                  <Font size="18.0" />
-               </font>
-            </Button>
-            <MenuButton layoutX="231.0" layoutY="465.0" mnemonicParsing="false" style="-fx-background-color: #9e6dd6;" text="New Game" textFill="WHITE">
-              <items>
-                <MenuItem mnemonicParsing="false" onAction="#onHostClick" text="Host" />
-                <MenuItem mnemonicParsing="false" onAction="#onJoinClick" text="Join" />
-              </items>
-               <font>
-                  <Font size="18.0" />
-               </font>
-            </MenuButton>
-      </children>
-    </AnchorPane>
+      <Label alignment="CENTER" prefWidth="450.0" text="Welcome to">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <VBox.margin>
+            <Insets />
+         </VBox.margin>
+         <padding>
+            <Insets right="70.0" />
+         </padding>
+      </Label>
+      <Label alignment="CENTER" prefWidth="450.0" text="Tank Trouble!">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <VBox.margin>
+            <Insets />
+         </VBox.margin>
+         <padding>
+            <Insets left="30.0" />
+         </padding>
+      </Label>
+      <ImageView fx:id="imageView" fitHeight="230.0" fitWidth="230.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@tank.png" />
+         </image>
+         <VBox.margin>
+            <Insets bottom="12.0" top="5.0" />
+         </VBox.margin>
+      </ImageView>
+      <Button minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#onHostClick" prefHeight="40.0" prefWidth="200.0" style="-fx-background-color: #9e6dd6;" text="Host Game" textFill="WHITE">
+         <font>
+            <Font size="18.0" />
+         </font>
+         <VBox.margin>
+            <Insets bottom="10.0" />
+         </VBox.margin>
+      </Button>
+      <Button minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#onJoinClick" prefHeight="40.0" prefWidth="200.0" style="-fx-background-color: #9e6dd6;" text="Join Game" textFill="WHITE">
+         <font>
+            <Font size="18.0" />
+         </font>
+         <VBox.margin>
+            <Insets bottom="20.0" />
+         </VBox.margin>
+      </Button>
+      <Button minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#onExitClick" prefHeight="40.0" prefWidth="200.0" style="-fx-background-color: #9e6dd6;" text="Exit" textFill="WHITE">
+         <font>
+            <Font size="18.0" />
+         </font>
+      </Button>
   </children>
 </VBox>

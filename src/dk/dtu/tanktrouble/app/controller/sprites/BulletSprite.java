@@ -1,39 +1,45 @@
 package dk.dtu.tanktrouble.app.controller.sprites;
 
-import dk.dtu.tanktrouble.app.controller.sprites.records.BulletRecord;
+import dk.dtu.tanktrouble.data.records.BulletRecord;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
 public class BulletSprite extends Sprite<BulletRecord> {
-    final double MIN_FADE = 0.2, FADE_TIME = .666, BULLET_SIZE = 0.03;
-    final Circle circle;
+	final double MIN_FADE = 0.1, FADE_TIME = .666;
+	final Circle circle;
 
-    public BulletSprite(AnchorPane anchorPane, BulletRecord record) {
-        super(anchorPane, record);
+	public BulletSprite(AnchorPane anchorPane, BulletRecord record) {
+		super(anchorPane, record);
 
-        circle = new Circle(BULLET_SIZE, Color.BLACK);
-        anchorPane.getChildren().addAll(circle);
-    }
+		circle = new Circle(record.size(), record.colorRecord().color());
 
-    @Override
-    protected void drawRecord(BulletRecord record, double drawMultiplier) {
-        circle.setRadius(BULLET_SIZE * drawMultiplier);
-        circle.setCenterX(record.x() * drawMultiplier);
-        circle.setCenterY(record.y() * drawMultiplier);
-        circle.toBack();
+		anchorPane.getChildren().addAll(circle);
+	}
 
-        double timeOut = startRecord.timeTillTimeout();
-        circle.setOpacity(TankMath.lerp(MIN_FADE, 1, (timeOut / FADE_TIME)));
-    }
+	@Override
+	protected void drawRecord(BulletRecord record, double drawMultiplier) {
+		circle.setRadius(record.size() * drawMultiplier);
+		circle.setCenterX(record.x() * drawMultiplier);
+		circle.setCenterY(record.y() * drawMultiplier);
+		circle.toBack();
 
-    @Override
-    protected BulletRecord lerp(BulletRecord start, BulletRecord stop, double t) {
-        return new BulletRecord(stop.id(), TankMath.lerp(start.x(), stop.x(), t), TankMath.lerp(start.y(), stop.y(), t), TankMath.lerp(start.timeTillTimeout(), stop.timeTillTimeout(), t));
-    }
+		double timeOut = startRecord.timeTillTimeout();
+		circle.setOpacity(TankMath.lerp(MIN_FADE, 1, (timeOut / FADE_TIME)));
+		circle.setFill(record.colorRecord().color());
+	}
 
-    @Override
-    public void destroy() {
-        anchorPane.getChildren().remove(circle);
-    }
+	@Override
+	protected BulletRecord lerp(BulletRecord start, BulletRecord stop, double t) {
+		double x = TankMath.lerp(start.x(), stop.x(), t);
+		double y = TankMath.lerp(start.y(), stop.y(), t);
+		double size = TankMath.lerp(start.size(), stop.size(), t);
+		double timeTillTimeout = TankMath.lerp(start.timeTillTimeout(), stop.timeTillTimeout(), t);
+
+		return new BulletRecord(stop.id(), x, y, size, timeTillTimeout, stop.colorRecord());
+	}
+
+	@Override
+	public void destroy() {
+		anchorPane.getChildren().remove(circle);
+	}
 }

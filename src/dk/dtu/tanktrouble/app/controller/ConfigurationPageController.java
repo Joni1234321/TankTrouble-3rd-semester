@@ -4,18 +4,16 @@ import dk.dtu.tanktrouble.app.networking.Networking;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.Slider;
-import javafx.scene.control.TextField;
-import javafx.scene.effect.ColorAdjust;
+import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
-import javafx.scene.text.Font;
 
 public class ConfigurationPageController extends GenericController {
 
 	private EventHandler<? super ActionEvent> proceedEventHandler = defaultHandler;
 	private EventHandler<? super ActionEvent> returnEventHandler = defaultHandler;
+
+	private TankImageAnimation animation;
+	private TankImageAnimation.AnimationSetting animationSetting;
 
 	@FXML
 	private Slider hueSlider;
@@ -31,10 +29,6 @@ public class ConfigurationPageController extends GenericController {
 	private Button proceedButton;
 	@FXML
 	private ImageView tankImage;
-	@FXML
-	private Font x1;
-
-	private static Mode currentMode;
 
 	public void setProceedResponder(EventHandler<? super ActionEvent> eventHandler) {
 		this.proceedEventHandler = eventHandler;
@@ -42,12 +36,38 @@ public class ConfigurationPageController extends GenericController {
 
 	@FXML
 	void onProceedClick(ActionEvent event) { // When user clicks Join/Host button
+		animation.stop();
+		int port;
+		try {
+			if (portTextField.getText().equals("")) {
+				port = Networking.getPort();
+			} else {
+				port = Integer.parseInt(portTextField.getText());
+				if (port < 1024 || port > 49151)
+					throw new NumberFormatException();
+			}
+		} catch (NumberFormatException e) {
+			invalidPortAlert().show();
+			return;
+		}
+		String address;
+		if (!ipTextField.isVisible() || ipTextField.getText().equals("")) {
+			address = Networking.standardAddress;
+		} else {
+			address = ipTextField.getText();
+		}
 		Networking.setTentativePlayerName(nameTextField.getText());
 		Networking.setTentativeHue(hueSlider.getValue());
-		int port = Integer.parseInt(portTextField.getText()); // TODO: Something better here. Validation needed
 		Networking.setPort(port);
-		Networking.setAddress(ipTextField.getText());
+		Networking.setAddress(address);
 		proceedEventHandler.handle(event);
+	}
+
+	private static Alert invalidPortAlert() {
+		Alert alert = new Alert(Alert.AlertType.ERROR);
+		alert.setTitle("Invalid port number");
+		alert.setContentText("Port number should be a number between 1024 and 49151");
+		return alert;
 	}
 
 	public void setReturnResponder(EventHandler<? super ActionEvent> eventHandler) {
@@ -56,22 +76,37 @@ public class ConfigurationPageController extends GenericController {
 
 	@FXML
 	void onReturnClick(ActionEvent event) {
+		animation.stop();
 		returnEventHandler.handle(event);
 	}
 
 	@Override
 	public void initializeController() {
-		ColorAdjust colorAdjust = new ColorAdjust();
-		colorAdjust.setSaturation(0.8);
+		animation = new TankImageAnimation(tankImage);
+		animation.animateHue = false; // The user should use the slider to alter hue
+		animation.setImageSetting(animationSetting);
+		Networking.setTentativeHue(animationSetting.getHue());
+		animation.start();
+
+		// Hue-slider listener
 		hueSlider.valueProperty().addListener((observableValue, oldValue, newValue) -> {
-			colorAdjust.setHue(newValue.doubleValue());
-			tankImage.setEffect(colorAdjust);
+			double newHue = newValue.doubleValue();
+			animation.setHue(newHue);
+			Networking.setTentativeHue(newHue);
 		});
+
 		// Prefill controls
 		nameTextField.setText(Networking.getTentativePlayerName());
 		hueSlider.setValue(Networking.getTentativeHue());
-		portTextField.setText(String.valueOf(Networking.getPort()));
-		ipTextField.setText(Networking.getAddress());
+		portTextField.setPromptText(String.valueOf(Networking.getPort()));
+	}
+
+	public void setAnimationSetting(TankImageAnimation.AnimationSetting animationSetting) {
+		this.animationSetting = animationSetting; // Is only shown on initializeController
+	}
+
+	public TankImageAnimation.AnimationSetting getAnimationSetting() {
+		return animation.getImageSetting();
 	}
 
 	@Override
@@ -84,19 +119,17 @@ public class ConfigurationPageController extends GenericController {
 		Join
 	}
 
-	public static Mode getCurrentMode() {
-		return ConfigurationPageController.currentMode;
-	}
-
 	public void setMode(Mode mode) {
-		ConfigurationPageController.currentMode = mode;
 		if (mode == Mode.Host) {
 			proceedButton.setText("Host");
 			ipLabel.setVisible(false);
 			ipTextField.setVisible(false);
 		} else {
+			if (Networking.getAddress().equals(Networking.standardAddress))
+				ipTextField.setPromptText("localhost");
+			else
+				ipTextField.setText(Networking.getAddress());
 			proceedButton.setText("Join");
 		}
 	}
-
 }

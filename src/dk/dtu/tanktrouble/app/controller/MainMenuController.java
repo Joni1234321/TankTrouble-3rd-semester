@@ -1,9 +1,7 @@
 package dk.dtu.tanktrouble.app.controller;
 
-import javafx.animation.AnimationTimer;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.ImageView;
 
 public class MainMenuController extends GenericController {
@@ -18,8 +16,8 @@ public class MainMenuController extends GenericController {
 	private Runnable joinGameResponder = () -> {
 	}; // Do nothing as default.
 
-	public TankAnimation animation;
-
+	private TankImageAnimation animation;
+	private TankImageAnimation.AnimationSetting animationSetting;
 
 	public void setExitResponder(Runnable responder) {
 		exitResponder = responder;
@@ -58,32 +56,17 @@ public class MainMenuController extends GenericController {
 
 	@Override
 	public void initializeController() {
-		animation = new TankAnimation();
+		animation = new TankImageAnimation(imageView);
+		animation.setImageSetting(animationSetting);
 		animation.start();
 	}
 
-	class TankAnimation extends AnimationTimer {
-		long last = System.nanoTime();
-		double hue = Math.random()*2-1;
-		final ColorAdjust colorAdjust;
-
-		public TankAnimation () {
-			colorAdjust = new ColorAdjust();
-			colorAdjust.setSaturation(0.8);
-			colorAdjust.setHue(hue);
-		}
-
-		@Override
-		public void handle(long now) {
-			double deltaTime = (double) (now - last) / 1e9;
-			imageView.setRotate(imageView.getRotate() + 5 * deltaTime);
-			hue = colorAdjust.getHue();
-			while (hue >= 1) {
-				hue -= 2;
-			}
-			colorAdjust.setHue(hue + 0.05 * deltaTime);
-			imageView.setEffect(colorAdjust);
-			last = now;
-		}
+	public void setAnimationSetting(TankImageAnimation.AnimationSetting animationSetting) {
+		this.animationSetting = animationSetting; // Is only shown on initializeController
 	}
+
+	public TankImageAnimation.AnimationSetting getAnimationSetting() {
+		return animation.getImageSetting();
+	}
+
 }

@@ -3,7 +3,10 @@ package dk.dtu.tanktrouble.app.networking;
 import dk.dtu.tanktrouble.app.networking.client.GameClient;
 import dk.dtu.tanktrouble.app.networking.server.GameServer;
 import dk.dtu.tanktrouble.data.Player;
-import org.jspace.*;
+import org.jspace.ActualField;
+import org.jspace.FormalField;
+import org.jspace.RemoteSpace;
+import org.jspace.Space;
 
 import java.io.IOException;
 
@@ -17,14 +20,17 @@ public class Networking {
 	private static String tentativePlayerName = "";
 	private static double tentativeHue = Math.random() * 2 - 1;
 
-	private static String address = "0.0.0.0";
-	private static int port = 31145;
+	public final static String standardAddress = "0.0.0.0";
+	public final static int standardPort = 31145;
+	private static String address = standardAddress;
+	private static int port = standardPort;
 
+	public static Space getPlayerChannel() {
+		return player.channel;
+	}
 
-	public static GameServer startServer() {
-		GameServer server = new GameServer(address, port);
-		new Thread(server).start();
-		return server;
+	public static void startServer() {
+		new Thread(new GameServer(address, port), "GameServer Thread").start();
 	}
 
 	public static GameClient startClient() {
@@ -38,7 +44,7 @@ public class Networking {
 
 			// Start new client and close lobby
 			GameClient client = new GameClient(player);
-			new Thread(client).start();
+			new Thread(client, "Game Client " + player.getId() + " Thread").start();
 			lobby.close();
 
 			return client;
@@ -47,29 +53,31 @@ public class Networking {
 		}
 	}
 
-	private static Player askLobbyForPlayer (RemoteSpace lobby, String requestedName, double requestedHue) throws Exception {
-		String joinID = Commands.generateRandomID();
+	private static Player askLobbyForPlayer(RemoteSpace lobby, String requestedName, double requestedHue) throws Exception {
+		String handshake = Commands.generateRandomID();
 
 		// Request player info
-		lobby.put(Commands.LOBBY_PLAYER_JOIN_REQUEST, joinID, requestedName, requestedHue);
+		lobby.put(Commands.LOBBY_PLAYER_JOIN_REQUEST, handshake, requestedName, requestedHue);
 		Object[] in = lobby.get(new ActualField(Commands.LOBBY_NEW_ID),
-				new ActualField(joinID),
+				new ActualField(handshake),
 				new FormalField(String.class),
 				new FormalField(Boolean.class),
+				new FormalField(String.class),
 				new FormalField(Double.class));
 
+		// Create new player
+		String id = (String) in[2];
+		boolean isAdmin = (boolean) in[3];
+		String name = (String) in[4];
+		double hue = (double) in[5];
+
 		// On failure
-		if(joinID.equals(Commands.SERVER_TO_PLAYER_ERROR_IN_CONNECTION)) {
+		if (id.equals(Commands.SERVER_TO_PLAYER_ERROR_IN_CONNECTION)) {
 			System.out.println("Could not connect");
 			return null;
 		}
 
-		// Create new player
-		String channelID = (String) in[2];
-		boolean isAdmin = (boolean) in[3];
-		double hue = (double) in[4];
-
-		Player player = new Player(joinID, requestedName, hue, getRemoteSpaceAt(channelID), isAdmin);
+		Player player = new Player(id, name, hue, getRemoteSpaceAt(id), isAdmin);
 
 		System.out.println(player);
 
@@ -78,19 +86,18 @@ public class Networking {
 
 	public static void reset() {
 		try {
-			((RemoteSpace)getCurrentPlayer().channel).close();
+			((RemoteSpace) player.channel).close();
 		} catch (Exception e) {
 			System.out.println("Failed to close remote spaces");
 		}
 		player.channel = null;
 		player = null;
-		address = "0.0.0.0";
-		port = 31145;
 	}
 
 	public static Player getCurrentPlayer() {
 		return player;
 	}
+
 	public static void startGame() {
 		if (player.isAdmin) {
 			try {
@@ -100,14 +107,20 @@ public class Networking {
 			}
 		}
 	}
+
 	public static void quitLobby() {
 		if (player == null) return;
 		try {
-			player.channel.put(Commands.TO_PLAYER_HANDLER, Commands.CLIENT_TO_SERVER_QUIT, new Object());
+			if (player.isAdmin) {
+				player.channel.put(Commands.TO_PLAYER_HANDLER, Commands.CLOSE_SERVER, new Object());
+			} else {
+				player.channel.put(Commands.TO_PLAYER_HANDLER, Commands.CLIENT_TO_SERVER_QUIT, new Object());
+			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 	}
+
 	public static void sendChatMessage(String message) {
 		if (message.equals("")) return;
 		try {
@@ -127,24 +140,31 @@ public class Networking {
 	public static String getTentativePlayerName() {
 		return tentativePlayerName;
 	}
+
 	public static void setTentativePlayerName(String tentativePlayerName) {
 		Networking.tentativePlayerName = tentativePlayerName;
 	}
+
 	public static double getTentativeHue() {
 		return tentativeHue;
 	}
+
 	public static void setTentativeHue(double tentativeHue) {
 		Networking.tentativeHue = tentativeHue;
 	}
+
 	public static void setAddress(String address) {
 		Networking.address = address;
 	}
+
 	public static String getAddress() {
 		return Networking.address;
 	}
+
 	public static void setPort(int port) {
 		Networking.port = port;
 	}
+
 	public static int getPort() {
 		return Networking.port;
 	}

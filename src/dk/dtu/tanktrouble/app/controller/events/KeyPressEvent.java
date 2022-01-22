@@ -8,34 +8,36 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyEvent;
 
 public class KeyPressEvent {
-    boolean isPressed = false;
-    final KeyCodeCombination keyCombination;
+	boolean isPressed = false;
+	final KeyCodeCombination keyCombination;
 
-    public KeyPressEvent (KeyCode code) {
-        keyCombination = new KeyCodeCombination(code);
-    }
+	public KeyPressEvent(KeyCode code) {
+		keyCombination = new KeyCodeCombination(code);
+	}
 
-    public void pressKey (KeyEvent event) {
-        if (!isPressed && keyCombination.match(event)) {
-            isPressed = true;
-            try {
-                Player player = Networking.getCurrentPlayer();
-                if (player != null) {
-                    player.channel.put(Commands.TO_PLAYER_HANDLER, Commands.KEY_EVENT, "+"+keyCombination.getName());
-                }
-            } catch (InterruptedException ignored) {}
-        }
-    }
+	public void pressKey(KeyEvent event) {
+		if (!isPressed && keyCombination.match(event)) {
+			isPressed = true;
+			try {
+				Player player = Networking.getCurrentPlayer();
+				if (player != null) {
+					player.channel.put(Commands.TO_PLAYER_HANDLER, Commands.KEY_EVENT, "+" + keyCombination.getName());
+				}
+			} catch (InterruptedException ignored) {
+			}
+		}
+	}
 
-    public void releaseKey (KeyEvent event) {
-        if (isPressed && keyCombination.match(event)) {
-            isPressed = false;
-            try {
-                Player player = Networking.getCurrentPlayer();
-                if (player != null) {
-                    player.channel.put(Commands.TO_PLAYER_HANDLER, Commands.KEY_EVENT, "-"+keyCombination.getName());
-                }
-            } catch (InterruptedException ignored) {}
-        }
-    }
+	public void releaseKey(KeyEvent event) {
+		if (isPressed && keyCombination.match(event)) {
+			isPressed = false;
+			try {
+				Player player = Networking.getCurrentPlayer();
+				if (player != null) {
+					player.channel.put(Commands.TO_PLAYER_HANDLER, Commands.KEY_EVENT, "-" + keyCombination.getName());
+				}
+			} catch (InterruptedException ignored) {
+			}
+		}
+	}
 }

@@ -4,167 +4,196 @@ import dk.dtu.tanktrouble.app.model.gameMap.GameMap;
 import dk.dtu.tanktrouble.app.model.gameMap.Wall;
 import dk.dtu.tanktrouble.app.model.geometry.Polygon;
 import dk.dtu.tanktrouble.app.model.geometry.Vector2;
+import dk.dtu.tanktrouble.app.model.powerups.TankMod;
+import dk.dtu.tanktrouble.app.model.powerups.TankModDefault;
 import dk.dtu.tanktrouble.data.Player;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 
 public class Tank {
 
-    private static final double PI2 = Math.PI * 2;
-    public static final double MOVE_SPEED = 1, ANGLE_SPEED = PI2;
-    public static final int DEFAULT_MAX_BULLETS = 5;
+	private static final double PI2 = Math.PI * 2;
+	public static final double MOVE_SPEED = 1, ANGLE_SPEED = PI2 * 0.75;
+	public static final int DEFAULT_MAX_BULLETS = 5;
+	public static final int MOD_QUEUE_MAX = 3;
 
-    public static final double WIDTH = 0.40;
-    public static final double HEIGHT = 0.40;
+	public static final double WIDTH = 0.40;
+	public static final double HEIGHT = 0.40;
 
-    private boolean canGetHit, isAlive;
-    private int maxBullets;
+	private boolean canGetHit, isAlive;
+	public int maxBullets;
 
-    private final GameMap map;
-    private double x, y, angle;
-    private final String id;
-    public Player player;
+	public final GameMap map;
 
-    public Tank(GameMap map, double x, double y, double angle, String id) {
-        this.map = map;
-        this.x = x;
-        this.y = y;
-        this.angle = angle;
-        this.id = id;
-        resurrect();
-    }
+	private TankMod tankMod;
+	private Queue<TankMod> modQueue;
 
-    //region shooting
-    public final List<Bullet> bullets = new ArrayList<>();
-    public Bullet shoot (long now) {
-        if (bullets.size() >= maxBullets) return null;
-        // Spawn bullet in front of tank
-        Bullet b = new Bullet(map, this, getTurretX(), getTurretY(), angle, now);
-        bullets.add(b);
-        return b;
-    }
-    public double getTurretX () {
-        return x + Math.cos(angle) * getTurretOffset();
-    }
-    public double getTurretY () {
-        return y + Math.sin(angle) * getTurretOffset();
-    }
-    double getTurretOffset (){
-        return WIDTH / 2 - 0.1;
-    }
-    //endregion
+	public final List<Bullet> bullets = new ArrayList<>();
+	public int bulletCount;
 
-    //region movement
-    public Polygon getPolygon () {
-        Vector2[] pts = new Vector2[]{
-                new Vector2(WIDTH/2*(240./296), HEIGHT/2*(195./296)),
+	private double x, y, angle;
 
-                new Vector2(WIDTH/2*(240./296), HEIGHT/2*(42./296)),
-                new Vector2(WIDTH/2, HEIGHT/2*(42./296)),
-                new Vector2(WIDTH/2, -HEIGHT/2*(42./296)),
-                new Vector2(WIDTH/2*(240./296), -HEIGHT/2*(42./296)),
+	private final String id;
+	public Player player;
 
-                new Vector2(WIDTH/2*(240./296), -HEIGHT/2*(195./296)),
-                new Vector2(-WIDTH/2*(240./296), -HEIGHT/2*(195./296)),
-                new Vector2(-WIDTH/2*(240./296), HEIGHT/2*(195./296))};
+	Tank killer;
 
-        // Rotate points around center and add (x,y) offset
-        for (int i = 0; i < pts.length; i++) {
-            pts[i] = new Vector2(x + pts[i].x*Math.cos(angle) - pts[i].y*Math.sin(angle),
-                                 y + pts[i].x*Math.sin(angle) + pts[i].y*Math.cos(angle));
-        }
-        return new Polygon(pts);
-    }
+	public Tank(GameMap map, double x, double y, double angle, String id) {
+		this.map = map;
+		this.x = x;
+		this.y = y;
+		this.angle = angle;
+		this.id = id;
+		resurrect();
+	}
 
-    public boolean isCollidingWithWall () {
-        for (Wall w : map.getNearbyWalls(x,y)) {
-            if (getPolygon().intersect(w.getPolygon())) {
-                return true;
-            }
-        }
-        return false;
-    }
+	//region shooting
+	public void shoot(long now) {
+		tankMod.shoot(this, now);
+	}
 
-    public boolean isCollidingWithTank (List<Tank> tanks) {
-        for (Tank other : tanks) {
-            if (other == this || !other.isAlive()) continue;
-            if (getPolygon().intersect(other.getPolygon())) {
-                return true;
-            }
-        }
-        return false;
-    }
+	public double getTurretX() {
+		return x + Math.cos(angle) * getTurretOffset();
+	}
 
-    public void moveKeyPress (double deltaTime, List<Tank> tanks) {
-        moveKeyPress(deltaTime, player.upPressed, player.rightPressed, player.downPressed, player.leftPressed, tanks);
-    }
+	public double getTurretY() {
+		return y + Math.sin(angle) * getTurretOffset();
+	}
 
-    public void moveKeyPress (double deltaTime, boolean up, boolean right, boolean down, boolean left, List<Tank> tanks) {
-        double distX = Math.cos(angle) * MOVE_SPEED * deltaTime;
-        double distY = Math.sin(angle) * MOVE_SPEED * deltaTime;
+	double getTurretOffset() {
+		return WIDTH / 2 - 0.1;
+	}
+	//endregion
 
-        int direction = (up ? 1 : 0) + (down ? -1 : 0);
+	//region movement
+	public Polygon getPolygon() {
+		return getPolygon(x, y, angle);
+	}
 
-        double oldX = x, oldY = y, oldAngle = angle;
-
-        x += distX * direction;
-        y += distY * direction;
-
-        direction = (right ? 1 : 0) + (left ? -1 : 0);
-
-        setAngle(angle + direction * ANGLE_SPEED * deltaTime);
-
-        if (isCollidingWithWall() || (isAlive() && isCollidingWithTank(tanks))) {
-            x = oldX;
-            y = oldY;
-            angle = oldAngle;
-        }
-    }
-    //endregion
+	public Polygon getPolygon(double x, double y, double angle) {
+		return new Polygon(spritePts).moveAndRotate(new Vector2(x, y), angle);
+	}
 
 
-    // THESE TWO WILL HAVE TO INCLUDE THE SAME VARIABLES
-    public void death () {
-        System.out.println("Tank was hit!");
-        maxBullets = 0;
-        canGetHit = false;
-        isAlive = false;
+	public boolean isCollidingWithWall(double x, double y, double angle) {
+		for (Wall w : map.getNearbyWalls(x, y))
+			if (getPolygon(x, y, angle).intersect(w.getPolygon())) return true;
 
-    }
-    public void resurrect() {
-        maxBullets = DEFAULT_MAX_BULLETS;
-        canGetHit = true;
-        isAlive = true;
-    }
+		return false;
+	}
 
-     void setAngle(double newAngle) {
-        angle = (((newAngle % PI2) + PI2) % PI2);  // positive modulo: https://stackoverflow.com/questions/5385024/mod-in-java-produces-negative-numbers
-    }
+	public boolean isCollidingWithTank(List<Tank> tanks) {
+		return isCollidingWithTank(x, y, angle, tanks);
+	}
+
+	public boolean isCollidingWithTank(double x, double y, double angle, List<Tank> tanks) {
+		for (Tank other : tanks) {
+			if (other == this || !other.isAlive()) continue;
+			if (getPolygon(x, y, angle).intersect(other.getPolygon())) return true;
+		}
+		return false;
+	}
+
+	public void moveKeyPress(List<Tank> tanks, double deltaTime, long now) {
+		tankMod.move(this, tanks, deltaTime, now);
+	}
+
+	public void tryMoveTo(double x, double y, double angle, List<Tank> tanks) {
+		if (isValidTransform(x, y, angle, tanks)) {
+			this.x = x;
+			this.y = y;
+			this.angle = angle;
+		}
+	}
+
+	protected boolean isValidTransform(double x, double y, double angle, List<Tank> tanks) {
+		return !(isCollidingWithWall(x, y, angle) || (isAlive() && isCollidingWithTank(x, y, angle, tanks)));
+	}
+
+	//endregion
 
 
-    public double getX() {
-        return x;
-    }
-    public double getY() {
-        return y;
-    }
+	// THESE TWO WILL HAVE TO INCLUDE THE SAME VARIABLES
+	public void death(Tank killer) {
+		maxBullets = 0;
+		canGetHit = false;
+		isAlive = false;
+		this.killer = killer;
+	}
 
-    public double getAngle() {
-        return angle;
-    }
+	public void resurrect() {
+		tankMod = new TankModDefault();
+		modQueue = new LinkedList<>();
+		bulletCount = 0;
+		maxBullets = DEFAULT_MAX_BULLETS;
+		canGetHit = true;
+		isAlive = true;
+		killer = null;
+	}
 
-    public boolean canGetHit() {
-        return canGetHit;
-    }
 
-    public boolean isAlive() {
-        return isAlive;
-    }
+	public void addMod(TankMod tankMod) {
+		if (this.tankMod.getClass() == TankModDefault.class)
+			this.tankMod = tankMod;
+		else
+			modQueue.add(tankMod);
+	}
 
-    public String getId () {
-        return id;
-    }
+	public void nextMod() {
+		if (modQueue.isEmpty())
+			tankMod = new TankModDefault();
+		else
+			tankMod = modQueue.poll();
+	}
 
+
+	public double getX() {
+		return x;
+	}
+
+	public double getY() {
+		return y;
+	}
+
+	public double getAngle() {
+		return angle;
+	}
+
+	public boolean canGetHit() {
+		return canGetHit;
+	}
+
+	public boolean isAlive() {
+		return isAlive;
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	public boolean canPickupMod() {
+		return canGetHit && modQueue.size() < MOD_QUEUE_MAX;
+	}
+
+	// All the points on the tank
+	private static final Vector2[] spritePts = new Vector2[]{
+			// BODY
+			new Vector2(WIDTH / 2 * (240. / 296), HEIGHT / 2 * (195. / 296)),
+
+			// TURRET
+			new Vector2(WIDTH / 2 * (240. / 296), HEIGHT / 2 * (42. / 296)),
+			new Vector2(WIDTH / 2, HEIGHT / 2 * (42. / 296)),
+			new Vector2(WIDTH / 2, -HEIGHT / 2 * (42. / 296)),
+			new Vector2(WIDTH / 2 * (240. / 296), -HEIGHT / 2 * (42. / 296)),
+
+			// BODY CONTINUED
+			new Vector2(WIDTH / 2 * (240. / 296), -HEIGHT / 2 * (195. / 296)),
+			new Vector2(-WIDTH / 2 * (240. / 296), -HEIGHT / 2 * (195. / 296)),
+			new Vector2(-WIDTH / 2 * (240. / 296), HEIGHT / 2 * (195. / 296))
+	};
 
 
 }

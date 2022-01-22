@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox fx:id="powerUpHolder" alignment="CENTER_LEFT" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <HBox fx:id="nameAndStateBar" alignment="CENTER_LEFT" fillHeight="false" VBox.vgrow="NEVER">
+         <children>
+            <ImageView fx:id="powerUpIcon" fitHeight="25.0" fitWidth="25.0" pickOnBounds="true" preserveRatio="true">
+               <HBox.margin>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </HBox.margin></ImageView>
+            <Label fx:id="powerUpName" focusTraversable="false" maxWidth="1.7976931348623157E308" text="Name" HBox.hgrow="ALWAYS">
+               <font>
+                  <Font name="System Bold" size="13.0" />
+               </font></Label>
+            <CheckBox fx:id="isActiveBox" mnemonicParsing="false">
+               <padding>
+                  <Insets right="10.0" />
+               </padding>
+            </CheckBox>
+         </children>
+      </HBox>
+      <Label fx:id="powerUpDescription" text="Description">
+         <VBox.margin>
+            <Insets />
+         </VBox.margin>
+         <padding>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+         </padding>
+      </Label>
+   </children>
+</VBox>

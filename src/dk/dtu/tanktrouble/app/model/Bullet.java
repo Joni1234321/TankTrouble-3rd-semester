@@ -2,98 +2,140 @@ package dk.dtu.tanktrouble.app.model;
 
 import dk.dtu.tanktrouble.app.model.gameMap.GameMap;
 import dk.dtu.tanktrouble.app.model.gameMap.Wall;
+import dk.dtu.tanktrouble.app.model.geometry.Polygon;
 import dk.dtu.tanktrouble.app.model.geometry.Vector2;
+import javafx.scene.paint.Color;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class Bullet {
+public abstract class Bullet {
 
-    public static final double BULLET_SPEED = Tank.MOVE_SPEED * 1.5;
-    static final long BULLET_TIME_S = 10 * 1000000000L;
+	public static final double BULLET_SPEED_DEFAULT = Tank.MOVE_SPEED * 1.5, BULLET_SIZE_DEFAULT = 0.035;
+	public static final long TIME_S = 1000000000L, BULLET_TIME_DEFAULT = 10 * TIME_S;
 
-    private boolean alive = true;
-    private boolean isHarmless = true;
+	public final double bulletSpeed, bulletSize;
+	public final long bulletTime;
 
-    private final GameMap map;
-    public final Tank tank;
-    Vector2 pos, dir;
-    final long startTime;
-    final int id;
-    static int currId = 0;
+	protected boolean alive = true;
+	private boolean shooterInvulnerable = true;
+	protected boolean specialBullet;
 
-    public Bullet(GameMap map, Tank tank, double x, double y, double angle, long startTime) {
-        this.map = map;
-        this.tank = tank;
+	protected final GameMap map;
+	public final Tank tank;
+	protected Vector2 pos, dir;
+	protected final long startTime;
+	public final String id;
+	static int currId = 0;
 
-        pos = new Vector2(x, y);
-        dir = new Vector2(Math.cos(angle), Math.sin(angle));
-        this.startTime = startTime;
-        id = ++currId;
-    }
+	public Bullet(Tank tank, double x, double y, double angle, long startTime, double bulletSpeed, long bulletTime, double bulletSize) {
 
-    public void updatePosition (double deltaTime) {
-        Vector2 r = dir.multiply(BULLET_SPEED*deltaTime);
+		this.map = tank.map;
+		this.tank = tank;
+		tank.bullets.add(this);
 
-        double bestT = 2, t;
-        Vector2 r2 = null;
-        for (Wall w : map.getNearbyWalls(pos)) {
-            Object[] newMove = w.getPolygon().reflect(pos, r);
-            if (newMove != null) {
-                t = (Double) newMove[0];
-                if (t < bestT) {
-                    bestT = t;
-                    r2 = (Vector2) newMove[1];
-                    isHarmless = false;
-                }
-            }
-        }
+		pos = new Vector2(x, y);
+		dir = new Vector2(Math.cos(angle), Math.sin(angle));
 
-        if (r2 != null) { // Has hit wall
-            pos = pos.add(r.multiply(bestT));
-            dir = r2;
-        } else {
-            pos = pos.add(r);
-        }
+		this.startTime = startTime;
+		this.bulletSpeed = bulletSpeed;
+		this.bulletTime = bulletTime;
+		this.bulletSize = bulletSize;
 
-    }
+		specialBullet = true;
 
-    public Tank killTankOnHit(List<Tank> tanks) {
-        // if still inside the shooting tank
-        if (isHarmless && this.tank.getPolygon().isInside(pos)) {
-            return null;
-        }
+		id = "Bullet:" + (++currId);
+	}
 
-        // check if hit a tank
-        for (Tank tank : tanks) {
-            if (tank.canGetHit() && tank.getPolygon().isInside(pos)) {
-                alive = false;
-                tank.death();
-                return tank;
-            }
-        }
+	public void onDeath(long now) {
+		alive = false;
+	}
 
-        // if not hitting any tank
-        isHarmless = false;
-        return null;
-    }
+	public void onPositionCollision(Vector2 oldDirection, Vector2 newDirection, double t) {
+		pos = pos.add(oldDirection.multiply(t));
+		dir = newDirection;
+	}
 
-    public double getTillTimeOut(long now) {
-        return (double) (BULLET_TIME_S + startTime - now) / 1e9;
-    }
 
-    public boolean isAlive (long now) {
-        return (startTime + BULLET_TIME_S > now) && alive;
-    }
+	public final void updatePosition(double deltaTime, long now) {
+		List<Polygon> wallColliders = new ArrayList<>();
+		for (Wall w : map.getNearbyWalls(pos)) wallColliders.add(w.getPolygon());
+		updatePosition(wallColliders, deltaTime, now);
+	}
 
-    public double getX() {
-        return pos.x;
-    }
+	public void updatePosition(List<Polygon> colliders, double deltaTime, long now) {
+		Vector2 r = dir.multiply(bulletSpeed * deltaTime);
 
-    public double getY() {
-        return pos.y;
-    }
+		double bestT = 2, t;
+		Vector2 r2 = null;
+		for (Polygon collider : colliders) {
+			Object[] newMove = collider.reflect(pos, r);
+			if (newMove != null) {
+				t = (Double) newMove[0];
+				if (t < bestT) {
+					bestT = t;
+					r2 = (Vector2) newMove[1];
+					shooterInvulnerable = false;
+				}
+			}
+		}
 
-    public int getId() {
-        return id;
-    }
+		if (r2 != null) { // Has hit wall
+			onPositionCollision(r, r2, bestT);
+		} else {
+			pos = pos.add(r);
+		}
+	}
+
+	public void checkCollisionWithTank(List<Tank> aliveTanks) {
+		// if still inside the shooting tank
+		if (shooterInvulnerable() && this.tank.getPolygon().isInside(pos)) {
+			return;
+		}
+
+		// check if hit a tank
+		for (Tank tank : aliveTanks) {
+			if (tank.canGetHit() && tank.getPolygon().isInside(pos)) {
+				onTankHit(tank, aliveTanks);
+				// Can only hit one tank
+				return;
+			}
+		}
+
+		// if not hitting any tank
+		shooterInvulnerable = false;
+	}
+
+	protected void onTankHit(Tank hitTank, List<Tank> aliveTanks) {
+		hitTank.death(this.tank);
+		alive = false;
+	}
+
+	public double getTillTimeOut(long now) {
+		return (double) (bulletTime + startTime - now) / 1e9;
+	}
+
+	public boolean isAlive(long now) {
+		return (startTime + bulletTime > now) && alive;
+	}
+
+	public double getX() {
+		return pos.x();
+	}
+
+	public double getY() {
+		return pos.y();
+	}
+
+	public boolean isSpecialBullet() {
+		return specialBullet;
+	}
+
+	public Color getColor() {
+		return Color.BLACK;
+	}
+
+	protected boolean shooterInvulnerable() {
+		return shooterInvulnerable;
+	}
 }

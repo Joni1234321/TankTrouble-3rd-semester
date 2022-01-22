@@ -23,7 +23,10 @@
 
 package org.jspace.gate;
 
+import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.util.HashMap;
 
@@ -87,6 +90,9 @@ public class TcpGateBuilder implements GateBuilder {
 		jSpaceMarshaller marshaller = getMarshaller(query.get(GateFactory.LANGUAGE_QUERY_ELEMENT));
 		String mode = query.getOrDefault(GateFactory.MODE_QUERY_ELEMENT,DEFAULT_MODE).toUpperCase();
 		if (query.containsKey(KEEP_MODE)) {
+			if(!portAvailable(port)){
+				throw new RuntimeException("Port busy");
+			}
 			return new KeepServerGate(marshaller,new InetSocketAddress(host, port),DEFAULT_BACKLOG);
 		}
 		if (query.containsKey(CONN_MODE)) {
@@ -94,6 +100,33 @@ public class TcpGateBuilder implements GateBuilder {
 		}
 		//TODO: Add here other modes!
 		return new KeepServerGate(marshaller,new InetSocketAddress(host, port),DEFAULT_BACKLOG);
+	}
+
+	public static boolean portAvailable(int port) {
+		ServerSocket ss = null;
+		DatagramSocket ds = null;
+		try {
+			ss = new ServerSocket(port);
+			ss.setReuseAddress(true);
+			ds = new DatagramSocket(port);
+			ds.setReuseAddress(true);
+			return true;
+		} catch (IOException ignored) {
+		} finally {
+			if (ds != null) {
+				ds.close();
+			}
+
+			if (ss != null) {
+				try {
+					ss.close();
+				} catch (IOException e) {
+					/* should not be thrown */
+				}
+			}
+		}
+
+		return false;
 	}
 
 	public jSpaceMarshaller getMarshaller( String code ) {

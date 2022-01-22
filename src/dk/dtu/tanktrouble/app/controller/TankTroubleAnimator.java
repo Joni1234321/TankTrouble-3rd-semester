@@ -1,148 +1,165 @@
 package dk.dtu.tanktrouble.app.controller;
 
 import dk.dtu.tanktrouble.app.controller.sprites.BulletSprite;
-import dk.dtu.tanktrouble.app.controller.sprites.TankMath;
+import dk.dtu.tanktrouble.app.controller.sprites.PowerUpSprite;
+import dk.dtu.tanktrouble.app.controller.sprites.Sprite;
 import dk.dtu.tanktrouble.app.controller.sprites.TankSprite;
-import dk.dtu.tanktrouble.app.controller.sprites.records.BulletRecord;
-import dk.dtu.tanktrouble.app.controller.sprites.records.TankRecord;
 import dk.dtu.tanktrouble.app.model.gameMap.GameMap;
 import dk.dtu.tanktrouble.app.model.gameMap.Wall;
 import dk.dtu.tanktrouble.app.networking.client.GameClient;
 import dk.dtu.tanktrouble.data.GameSnapshot;
-import dk.dtu.tanktrouble.data.Player;
+import dk.dtu.tanktrouble.data.records.SpriteRecord;
+import dk.dtu.tanktrouble.data.records.TankRecord;
 import javafx.animation.AnimationTimer;
 import javafx.scene.image.Image;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.Rectangle;
 import org.jspace.FormalField;
 import org.jspace.SequentialSpace;
 import org.jspace.Space;
 
+import java.io.InputStream;
 import java.util.*;
 
 public class TankTroubleAnimator extends AnimationTimer {
-    // Draws tankRecords, bulletRecords and map
+	// Draws tankRecords, bulletRecords and map
 
-    private final GameController controller;
-    private final Image tankImage;
-    private final long timeOffset;
+	private final GameController controller;
 
-    private boolean redrawMap = true;
+	private boolean redrawMap = true;
 
-    // Visuals
-    private Collection<Rectangle> walls = new ArrayList<>();
-    private final Map<String, TankSprite> tankSprites = new HashMap<>();
-    private final Map<Integer, BulletSprite> bulletSprites = new HashMap<>();
-
-
-    // Snapshots
-    public static Space pendingSnapshots = new SequentialSpace();
-    GameSnapshot snapshot;
-    public static GameSnapshot oldSnapshot;
-
-    public TankTroubleAnimator (GameController controller, Image tankImage) {
-        this.controller = controller;
-        this.tankImage = tankImage;
-        timeOffset = TankMath.getTimeOffset();
-    }
+	// Visuals
+	private Collection<Rectangle> walls = new ArrayList<>();
+	private final Map<String, TankSprite> tankSprites = new HashMap<>();
+	private final Map<String, BulletSprite> bulletSprites = new HashMap<>();
+	private final Map<String, PowerUpSprite> powerUpSprites = new HashMap<>();
 
 
-    @Override
-    public void handle (long nowOffset) {
-        long now = nowOffset + timeOffset;
+	// Snapshots
+	public static Space pendingSnapshots = new SequentialSpace();
+	GameSnapshot snapshot;
+	public static GameSnapshot oldSnapshot;
 
-        if (redrawMap) drawMap(getMap());
+	public TankTroubleAnimator(GameController controller) {
+		this.controller = controller;
+	}
 
-        // Get a snapshot that will be drawn in the future
-        while (now > snapshot.time()) {
-            GameSnapshot newSnapshot = null;
+	@Override
+	public void handle(long nowOffset) {
+		long now = nowOffset + GameClient.timeOffset;
 
-            // Get snapshot
-            try {
-                Object[] o = pendingSnapshots.getp(new FormalField(GameSnapshot.class));
-                if (o != null) {
-                    newSnapshot = (GameSnapshot) o[0];
-                }
-            } catch (InterruptedException ignored) {}
+		if (redrawMap) drawMap(getMap());
 
-            if (newSnapshot == null) break;
+		// Get a snapshot that will be drawn in the future
+		while (now > snapshot.time()) {
+			GameSnapshot newSnapshot = null;
 
-            // Set snapshot
-            oldSnapshot = snapshot;
-            snapshot = newSnapshot;
+			// Get snapshot
+			try {
+				Object[] o = pendingSnapshots.getp(new FormalField(GameSnapshot.class));
+				if (o != null) {
+					newSnapshot = (GameSnapshot) o[0];
+				}
+			} catch (InterruptedException ignored) {
+			}
 
-            // Set animation for tankRecords
-            for (TankRecord record : snapshot.tankRecords()) {
-                TankSprite sprite = tankSprites.get(record.id());
-                if (sprite != null) sprite.updateStopRecord(record);
-            }
+			if (newSnapshot == null) break;
 
-            // Recreate bullet sprites
-            for (BulletSprite bv : bulletSprites.values()) bv.destroy();
-            bulletSprites.clear();
+			// Set snapshot
+			oldSnapshot = snapshot;
+			snapshot = newSnapshot;
 
-            for (BulletRecord oldBulletRecord : oldSnapshot.bulletRecords()) {
-                BulletSprite sprite = new BulletSprite(controller.anchorPane, oldBulletRecord);
-                bulletSprites.put(oldBulletRecord.id(), sprite);
-            }
-            for (BulletRecord newBulletRecord : snapshot.bulletRecords()) {
-                BulletSprite sprite = bulletSprites.get(newBulletRecord.id());
-                if (sprite != null) sprite.updateStopRecord(newBulletRecord);
-            }
-        }
+			updateSprites(snapshot.tankRecords(), tankSprites, TankSprite.class);
+			updateSprites(snapshot.bulletRecords(), bulletSprites, BulletSprite.class);
+			updateSprites(snapshot.powerUpRecords(), powerUpSprites, PowerUpSprite.class);
+		}
 
-        drawMovingObjects(oldSnapshot, snapshot, now);
+		double t = (double) (now - oldSnapshot.time()) / (snapshot.time() - oldSnapshot.time());
+		drawSprites(tankSprites.values(), t);
+		drawSprites(bulletSprites.values(), t);
+		drawSprites(powerUpSprites.values(), t);
+	}
 
-    }
 
-    // Draw
-    private void drawMap(GameMap map) {
-        redrawMap = false;
-        controller.anchorPane.getChildren().removeAll(walls);
+	// Draw
+	private void drawMap(GameMap map) {
+		redrawMap = false;
+		controller.anchorPane.getChildren().removeAll(walls);
 
-        walls = new ArrayList<>();
-        for (Wall w : map.getActiveWalls())
-            walls.add(w.getRectangleDraw(controller.drawMultiplier));
+		walls = new ArrayList<>();
+		for (Wall w : map.getActiveWalls())
+			walls.add(w.getRectangleDraw(controller.drawMultiplier));
 
-        controller.anchorPane.getChildren().addAll(walls);
-    }
-    private void drawMovingObjects (GameSnapshot oldSnapshot, GameSnapshot snapshot, long now) {
-        // Linear interpolation value
-        double t = (double)(now - oldSnapshot.time()) / (snapshot.time() - oldSnapshot.time());
+		controller.anchorPane.getChildren().addAll(walls);
+	}
 
-        // Draw tankRecords
-        for (TankSprite sprite: tankSprites.values())
-            sprite.draw(t, controller.drawMultiplier);
+	private void drawSprites(Collection<? extends Sprite<?>> sprites, double t) {
+		for (Sprite<?> sprite : sprites)
+			sprite.draw(t, controller.drawMultiplier);
+	}
 
-        // Draw bulletRecords
-        for (BulletSprite sprite : bulletSprites.values())
-            sprite.draw(t, controller.drawMultiplier);
-    }
+	public <R extends SpriteRecord, S extends Sprite<R>> void updateSprites(List<R> records, Map<String, S> sprites, Class<S> spriteClass) {
+		Map<String, S> activeSprites = new HashMap<>();
 
-    // Load
-    public void loadPlayers(List<TankRecord> tankRecords) {
-        pendingSnapshots = new SequentialSpace();
+		for (R record : records) {
+			S sprite = sprites.get(record.id());
 
-        oldSnapshot = new GameSnapshot(tankRecords, new ArrayList<>(), System.nanoTime());
-        snapshot = new GameSnapshot(tankRecords, new ArrayList<>(), System.nanoTime());
+			if (sprite != null) {
+				// Update all sprites that do have a record
+				sprite.updateStopRecord(record);
+				sprites.remove(record.id());
+			} else {
+				// Create new sprite for every record that doesn't have one and add to dictionary
+				try {
+					sprite = spriteClass.getConstructor(AnchorPane.class, record.getClass()).newInstance(controller.anchorPane, record);
+				} catch (Exception exception) {
+					exception.printStackTrace();
+				}
+			}
 
-        // Remove old
-        for (TankSprite tv : tankSprites.values()) tv.destroy();
-        tankSprites.clear();
-        for (BulletSprite bv : bulletSprites.values()) bv.destroy();
-        bulletSprites.clear();
+			activeSprites.put(record.id(), sprite);
+		}
 
-        // Draw tankRecords and add them to list
-        for (TankRecord record : tankRecords) {
-            Player player = GameClient.getPlayerById(record.id());
-            double hue = player == null ? Math.random()*2-1 : player.hue;
-            TankSprite tankSprite = new TankSprite(tankImage, controller.anchorPane, record, hue);
-            tankSprites.put(record.id(), tankSprite);
-        }
-    }
+		// Remove all other sprites
+		for (S spriteWithoutRecord : sprites.values()) {
+			spriteWithoutRecord.destroy();
+		}
 
-    public void setRedrawMap () {
-        redrawMap = true;
-    }
+		sprites.clear();
+		sprites.putAll(activeSprites);
+	}
 
-    public GameMap getMap () {return GameMap.activeMap;}
+	// Load
+	public void loadPlayers(List<TankRecord> tankRecords) {
+		pendingSnapshots = new SequentialSpace();
+
+		oldSnapshot = new GameSnapshot(tankRecords, System.nanoTime() + GameClient.timeOffset);
+		snapshot = new GameSnapshot(tankRecords, System.nanoTime() + GameClient.timeOffset);
+
+		// Remove old
+		for (TankSprite tv : tankSprites.values()) tv.destroy();
+		tankSprites.clear();
+		for (BulletSprite bv : bulletSprites.values()) bv.destroy();
+		bulletSprites.clear();
+
+
+		// Draw tankRecords and add them to list
+		for (TankRecord record : tankRecords)
+			tankSprites.put(record.id(), new TankSprite(controller.anchorPane, record));
+	}
+
+	public void setRedrawMap() {
+		redrawMap = true;
+	}
+
+	public GameMap getMap() {
+		return GameMap.activeMap;
+	}
+
+	// JAVAFX
+	public static Image loadImage(String path) {
+		InputStream tankInputStream = TankTroubleAnimator.class.getResourceAsStream(path);
+		assert tankInputStream != null;
+		return new Image(tankInputStream);
+	}
 }

@@ -1,10 +1,12 @@
-Shotgun
+//Shotgun
 Laser guided laser
+Controlling Missile
 Homing missile
-Mines
-Double shots
+//Mines
+//Double shots
 Minigun
 Move faster
-Bomb (explodes into fragments after being shot)
+//Bomb (explodes into fragments after being shot)
 Laser throught walls
 Shield
+//Bouncing ball

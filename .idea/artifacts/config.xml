@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+  <dontWrapJar>false</dontWrapJar>
+  <headerType>gui</headerType>
+  <jar>..\..\TankTrouble.jar</jar>
+  <outfile>..\..\dist\TankTrouble.exe</outfile>
+  <errTitle></errTitle>
+  <cmdLine></cmdLine>
+  <chdir>.</chdir>
+  <priority>normal</priority>
+  <downloadUrl></downloadUrl>
+  <supportUrl></supportUrl>
+  <stayAlive>false</stayAlive>
+  <restartOnCrash>false</restartOnCrash>
+  <manifest></manifest>
+  <icon></icon>
+  <jre>
+    <path>runtimes\jre</path>
+    <bundledJre64Bit>false</bundledJre64Bit>
+    <bundledJreAsFallback>false</bundledJreAsFallback>
+    <minVersion>17</minVersion>
+    <maxVersion></maxVersion>
+    <jdkPreference>jdkOnly</jdkPreference>
+    <runtimeBits>64/32</runtimeBits>
+    <opt>--module-path runtimes\javafx-sdk-17.0.1\lib --add-modules javafx.controls,javafx.fxml</opt>
+  </jre>
+</launch4jConfig>

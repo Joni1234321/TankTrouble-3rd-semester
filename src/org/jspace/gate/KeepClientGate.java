@@ -89,7 +89,8 @@ public class KeepClientGate implements ClientGate {
 
 	@Override
 	public void open() throws UnknownHostException, IOException {
-		this.socket = new Socket(host, port);
+		this.socket = new Socket();
+		this.socket.connect(new InetSocketAddress(host, port), 3000);
 		this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		this.writer = new PrintWriter(socket.getOutputStream());
 		outThread = new Thread(this::outboxHandlingMethod);

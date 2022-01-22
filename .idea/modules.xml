@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/jSpace-Project.iml" filepath="$PROJECT_DIR$/jSpace-Project.iml" />
+      <module fileurl="file://$PROJECT_DIR$/TankTrouble.iml" filepath="$PROJECT_DIR$/TankTrouble.iml" />
     </modules>
   </component>
 </project>
